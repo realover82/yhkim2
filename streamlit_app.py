@@ -72,8 +72,8 @@ def render_header():
     st.markdown("---")
 
 def render_sidebar(tab_key, tab_info, df_all_data):
-    st.sidebar.header(f"{tab_info[tab_key]['header']} 제어")
-
+    st.sidebar.header(f"'{tab_info[tab_key]['header']}' 제어")
+    
     jig_col_name = st.session_state.jig_col_mapping[tab_key]
     
     if jig_col_name not in df_all_data.columns:
@@ -111,7 +111,7 @@ def render_sidebar(tab_key, tab_info, df_all_data):
     
     return selected_jig, jig_col_name
 
-def render_main_content(tab_key, tab_info, df_all_data, selected_jig, jig_col_name):
+def render_main_content(tab_key, tab_info, selected_jig, jig_col_name):
     if st.session_state.analysis_status[tab_key]['analyzed']:
         display_analysis_result(tab_key, tab_info[tab_key]['header'], tab_info[tab_key]['date_col'],
                                 selected_jig=selected_jig if selected_jig != '모든 PC' else None,
@@ -189,17 +189,19 @@ def main():
         'semi': {'header': "파일 Semi 분석", 'date_col': 'SemiAssyStartTime_dt'},
         'func': {'header': "파일 Func 분석", 'date_col': 'BatadcStamp_dt'}
     }
-
-    # 헤더 영역은 사이드바 외에 별도로 렌더링
-    render_header()
     
+    # 헤더 영역
+    render_header()
+
+    # 탭과 메인 콘텐츠 영역
     tabs = st.tabs(list(tab_info.keys()))
     
     for i, tab_key in enumerate(tab_info.keys()):
         with tabs[i]:
             selected_jig, jig_col_name = render_sidebar(tab_key, tab_info, df_all_data)
-            render_main_content(tab_key, tab_info, df_all_data, selected_jig, jig_col_name)
+            render_main_content(tab_key, tab_info, selected_jig, jig_col_name)
             render_footer(tab_key, df_all_data)
+
 
 if __name__ == "__main__":
     main()
