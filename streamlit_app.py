@@ -37,8 +37,8 @@ def initialize_session_state():
         st.session_state.jig_col_mapping = {
             'pcb': 'PcbMaxIrPwr',
             'fw': 'FwPC',
-            'rftx': 'RfTxPC',
-            'semi': 'SemiAssyMaxBatVolt',
+            'rftx': 'RftxPC',
+            'semi': 'SemiAssyPC',
             'func': 'BatadcPC',
         }
     if 'show_line_chart' not in st.session_state:
@@ -66,29 +66,11 @@ def initialize_session_state():
             'func': {'results': pd.DataFrame(), 'show': False},
         }
     
-def main():
-    st.set_page_config(layout="wide")
+def render_header():
     st.title("리모컨 생산 데이터 분석 툴")
     st.markdown("---")
 
-    initialize_session_state()
-    
-    conn = get_connection()
-    if conn is None:
-        return
-        
-    try:
-        df_all_data = pd.read_sql_query("SELECT * FROM historyinspection;", conn)
-    except Exception as e:
-        st.error(f"데이터베이스에서 'historyinspection' 테이블을 불러오는 중 오류가 발생했습니다: {e}")
-        return
-
-    df_all_data['PcbStartTime_dt'] = pd.to_datetime(df_all_data['PcbStartTime'], errors='coerce')
-    df_all_data['FwStamp_dt'] = pd.to_datetime(df_all_data['FwStamp'], errors='coerce')
-    df_all_data['RfTxStamp_dt'] = pd.to_datetime(df_all_data['RfTxStamp'], errors='coerce')
-    df_all_data['SemiAssyStartTime_dt'] = pd.to_datetime(df_all_data['SemiAssyStartTime'], errors='coerce')
-    df_all_data['BatadcStamp_dt'] = pd.to_datetime(df_all_data['BatadcStamp'], errors='coerce')
-
+def render_main_content(df_all_data):
     tab_info = {
         'pcb': {'header': "파일 PCB (Pcb_Process)", 'date_col': 'PcbStartTime_dt'},
         'fw': {'header': "파일 Fw (Fw_Process)", 'date_col': 'FwStamp_dt'},
@@ -148,8 +130,33 @@ def main():
             st.markdown(f"#### {tab_info[tab_key]['header'].split()[1]} 데이터 조회")
             display_data_views(tab_key, df_all_data)
 
+def render_footer():
     st.markdown("---")
     st.markdown("<p style='text-align:center'>Copyright © 2024</p>", unsafe_allow_html=True)
+
+def main():
+    st.set_page_config(layout="wide")
+    initialize_session_state()
+    
+    conn = get_connection()
+    if conn is None:
+        return
+        
+    try:
+        df_all_data = pd.read_sql_query("SELECT * FROM historyinspection;", conn)
+    except Exception as e:
+        st.error(f"데이터베이스에서 'historyinspection' 테이블을 불러오는 중 오류가 발생했습니다: {e}")
+        return
+
+    df_all_data['PcbStartTime_dt'] = pd.to_datetime(df_all_data['PcbStartTime'], errors='coerce')
+    df_all_data['FwStamp_dt'] = pd.to_datetime(df_all_data['FwStamp'], errors='coerce')
+    df_all_data['RfTxStamp_dt'] = pd.to_datetime(df_all_data['RfTxStamp'], errors='coerce')
+    df_all_data['SemiAssyStartTime_dt'] = pd.to_datetime(df_all_data['SemiAssyStartTime'], errors='coerce')
+    df_all_data['BatadcStamp_dt'] = pd.to_datetime(df_all_data['BatadcStamp'], errors='coerce')
+
+    render_header()
+    render_main_content(df_all_data)
+    render_footer()
             
 if __name__ == "__main__":
     main()
