@@ -37,8 +37,8 @@ def initialize_session_state():
         st.session_state.jig_col_mapping = {
             'pcb': 'PcbMaxIrPwr',
             'fw': 'FwPC',
-            'rftx': 'RfTxPC',
-            'semi': 'SemiAssyMaxBatVolt',
+            'rftx': 'RftxPC',
+            'semi': 'SemiAssyPC',
             'func': 'BatadcPC',
         }
     if 'show_line_chart' not in st.session_state:
@@ -154,9 +154,19 @@ def main():
     df_all_data['SemiAssyStartTime_dt'] = pd.to_datetime(df_all_data['SemiAssyStartTime'], errors='coerce')
     df_all_data['BatadcStamp_dt'] = pd.to_datetime(df_all_data['BatadcStamp'], errors='coerce')
 
-    render_header()
-    render_main_content(df_all_data)
-    render_footer()
+    # 컨테이너를 사용하여 레이아웃을 명확하게 분리
+    header_container = st.container()
+    main_container = st.container()
+    footer_container = st.container()
+
+    with header_container:
+        render_header()
+    
+    with main_container:
+        render_main_content(df_all_data)
+
+    with footer_container:
+        render_footer()
             
 if __name__ == "__main__":
     main()
