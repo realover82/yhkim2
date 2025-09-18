@@ -76,6 +76,7 @@ def render_sidebar(tab_key, tab_info, df_all_data):
     
     jig_col_name = st.session_state.jig_col_mapping[tab_key]
     
+    # 데이터프레임에 해당 컬럼이 없는 경우 '전체'로 처리
     if jig_col_name not in df_all_data.columns:
         jig_col_name = '__total_group__'
         df_all_data[jig_col_name] = '전체'
@@ -129,8 +130,10 @@ def render_footer(tab_key, df_all_data):
             if snumber_query:
                 st.session_state.snumber_search[tab_key]['show'] = True
                 with st.spinner("데이터베이스에서 SNumber 검색 중..."):
-                    filtered_df = df_all_data[
-                        df_all_data['SNumber'].fillna('').astype(str).str.contains(snumber_query, case=False, na=False)
+                    # 현재 탭에 대한 데이터만 필터링하여 검색
+                    tab_df = st.session_state.analysis_results.get(tab_key, pd.DataFrame())
+                    filtered_df = tab_df[
+                        tab_df['SNumber'].fillna('').astype(str).str.contains(snumber_query, case=False, na=False)
                     ].copy()
                 
                 if not filtered_df.empty:
@@ -145,7 +148,7 @@ def render_footer(tab_key, df_all_data):
     with col2:
         if st.button("원본 DB 조회", key=f"view_last_db_{tab_key}"):
             st.session_state.original_db_view[tab_key]['show'] = True
-            if st.session_state.analysis_results[tab_key] is not None:
+            if st.session_state.analysis_results.get(tab_key) is not None:
                 st.success(f"{tab_key.upper()} 탭의 원본 데이터를 조회합니다.")
                 st.session_state.original_db_view[tab_key]['results'] = st.session_state.analysis_results[tab_key].copy()
             else:
@@ -192,8 +195,7 @@ def main():
     
     # 헤더 영역
     render_header()
-
-    # 탭과 메인 콘텐츠 영역
+    
     tabs = st.tabs(list(tab_info.keys()))
     
     for i, tab_key in enumerate(tab_info.keys()):
