@@ -67,10 +67,13 @@ def initialize_session_state():
         }
     
 def render_header():
+    st.header("HEADER 영역")
     st.title("리모컨 생산 데이터 분석 툴")
     st.markdown("---")
 
 def render_main_content(df_all_data):
+    st.header("MAIN CONTENT 영역")
+    
     tab_info = {
         'pcb': {'header': "파일 PCB (Pcb_Process)", 'date_col': 'PcbStartTime_dt'},
         'fw': {'header': "파일 Fw (Fw_Process)", 'date_col': 'FwStamp_dt'},
@@ -131,6 +134,7 @@ def render_main_content(df_all_data):
             display_data_views(tab_key, df_all_data)
 
 def render_footer():
+    st.header("FOOTER 영역")
     st.markdown("---")
     st.markdown("<p style='text-align:center'>Copyright © 2024</p>", unsafe_allow_html=True)
 
