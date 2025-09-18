@@ -6,7 +6,8 @@ import sys
 import os
 
 # 현재 파일의 절대 경로를 기준으로 프로젝트 루트 디렉토리를 찾습니다.
-# 이렇게 하면 Streamlit이 어떤 경로에서 실행되든 모듈을 올바르게 찾을 수 있습니다.
+# 이 코드를 통해 Streamlit이 어떤 경로에서 실행되든 모듈을 올바르게 찾을 수 있습니다.
+# streamlit_app.py와 src 폴더가 같은 위치에 있어야 합니다.
 project_root = os.path.dirname(os.path.abspath(__file__))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
