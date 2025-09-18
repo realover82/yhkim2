@@ -65,78 +65,104 @@ def initialize_session_state():
             'semi': {'results': pd.DataFrame(), 'show': False},
             'func': {'results': pd.DataFrame(), 'show': False},
         }
-    
-def render_header():
-    st.header("HEADER 영역")
+
+# --- UI 렌더링 함수들 ---
+def render_header(tabs, tab_info, df_all_data):
     st.title("리모컨 생산 데이터 분석 툴")
     st.markdown("---")
+    st.header("탭을 선택하여 분석할 데이터를 확인하세요.")
+    return tabs
 
-def render_main_content(df_all_data):
-    st.header("MAIN CONTENT 영역")
+def render_sidebar(tab_key, tab_info, df_all_data):
+    st.sidebar.header(f"{tab_info[tab_key]['header']} 제어")
+
+    jig_col_name = st.session_state.jig_col_mapping[tab_key]
     
-    tab_info = {
-        'pcb': {'header': "파일 PCB (Pcb_Process)", 'date_col': 'PcbStartTime_dt'},
-        'fw': {'header': "파일 Fw (Fw_Process)", 'date_col': 'FwStamp_dt'},
-        'rftx': {'header': "파일 RfTx (RfTx_Process)", 'date_col': 'RfTxStamp_dt'},
-        'semi': {'header': "파일 Semi (SemiAssy_Process)", 'date_col': 'SemiAssyStartTime_dt'},
-        'func': {'header': "파일 Func (Func_Process)", 'date_col': 'BatadcStamp_dt'}
-    }
+    if jig_col_name not in df_all_data.columns:
+        jig_col_name = '__total_group__'
+        df_all_data[jig_col_name] = '전체'
 
-    tabs = st.tabs(list(tab_info.keys()))
+    unique_jigs = df_all_data[jig_col_name].dropna().unique()
+    pc_options = ['모든 PC'] + sorted(list(unique_jigs))
+    selected_jig = st.sidebar.selectbox("PC (Jig) 선택", pc_options, key=f"pc_select_{tab_key}")
 
-    for i, tab_key in enumerate(tab_info.keys()):
-        with tabs[i]:
-            st.header(tab_info[tab_key]['header'])
-
-            jig_col_name = st.session_state.jig_col_mapping[tab_key]
+    df_dates = df_all_data[tab_info[tab_key]['date_col']].dt.date.dropna()
+    min_date = df_dates.min() if not df_dates.empty else date.today()
+    max_date = df_dates.max() if not df_dates.dropna().empty else date.today()
+    selected_dates = st.sidebar.date_input("날짜 범위 선택", value=(min_date, max_date), key=f"dates_{tab_key}")
+    
+    if st.sidebar.button("분석 실행", key=f"analyze_{tab_key}"):
+        with st.spinner("데이터 분석 및 저장 중..."):
+            if len(selected_dates) == 2:
+                start_date, end_date = selected_dates
+                df_filtered = df_all_data[
+                    (df_all_data[tab_info[tab_key]['date_col']].dt.date >= start_date) &
+                    (df_all_data[tab_info[tab_key]['date_col']].dt.date <= end_date)
+                ].copy()
+                if selected_jig != '모든 PC':
+                    df_filtered = df_filtered[df_filtered[jig_col_name] == selected_jig].copy()
+            else:
+                st.warning("날짜 범위를 올바르게 선택해주세요.")
+                df_filtered = pd.DataFrame()
             
-            # DataFrame에 해당 컬럼이 있는지 확인하고 없을 경우 'SNumber'를 사용
-            if jig_col_name not in df_all_data.columns:
-                jig_col_name = 'SNumber'
-                st.warning(f"'{st.session_state.jig_col_mapping[tab_key]}' 컬럼이 없어 'SNumber'로 대체합니다.")
-            
-            unique_jigs = df_all_data[jig_col_name].dropna().unique()
-            pc_options = ['모든 PC'] + sorted(list(unique_jigs))
-            selected_jig = st.selectbox("PC (Jig) 선택", pc_options, key=f"pc_select_{tab_key}")
+            st.session_state.analysis_results[tab_key] = df_filtered
+            st.session_state.analysis_data[tab_key] = analyze_data(df_filtered, tab_info[tab_key]['date_col'], jig_col_name)
+            st.session_state.analysis_time[tab_key] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            st.session_state.analysis_status[tab_key]['analyzed'] = True
+        st.success("분석 완료! 결과가 저장되었습니다.")
+    
+    return selected_jig, jig_col_name
 
-            df_dates = df_all_data[tab_info[tab_key]['date_col']].dt.date.dropna()
-            min_date = df_dates.min() if not df_dates.empty else date.today()
-            max_date = df_dates.max() if not df_dates.dropna().empty else date.today()
-            selected_dates = st.date_input("날짜 범위 선택", value=(min_date, max_date), key=f"dates_{tab_key}")
-            
-            if st.button("분석 실행", key=f"analyze_{tab_key}"):
-                with st.spinner("데이터 분석 및 저장 중..."):
-                    if len(selected_dates) == 2:
-                        start_date, end_date = selected_dates
-                        df_filtered = df_all_data[
-                            (df_all_data[tab_info[tab_key]['date_col']].dt.date >= start_date) &
-                            (df_all_data[tab_info[tab_key]['date_col']].dt.date <= end_date)
-                        ].copy()
-                        if selected_jig != '모든 PC':
-                            df_filtered = df_filtered[df_filtered[jig_col_name] == selected_jig].copy()
-                    else:
-                        st.warning("날짜 범위를 올바르게 선택해주세요.")
-                        df_filtered = pd.DataFrame()
-                    
-                    st.session_state.analysis_results[tab_key] = df_filtered
-                    st.session_state.analysis_data[tab_key] = analyze_data(df_filtered, tab_info[tab_key]['date_col'], jig_col_name)
-                    st.session_state.analysis_time[tab_key] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    st.session_state.analysis_status[tab_key]['analyzed'] = True
-                st.success("분석 완료! 결과가 저장되었습니다.")
+def render_main_content(tab_key, tab_info, df_all_data, selected_jig, jig_col_name):
+    if st.session_state.analysis_status[tab_key]['analyzed']:
+        display_analysis_result(tab_key, tab_info[tab_key]['header'], tab_info[tab_key]['date_col'],
+                                selected_jig=selected_jig if selected_jig != '모든 PC' else None,
+                                used_jig_col=st.session_state.analysis_data[tab_key][2])
 
-            if st.session_state.analysis_status[tab_key]['analyzed']:
-                display_analysis_result(tab_key, tab_info[tab_key]['header'], tab_info[tab_key]['date_col'],
-                                        selected_jig=selected_jig if selected_jig != '모든 PC' else None,
-                                        used_jig_col=st.session_state.analysis_data[tab_key][2])
-            
-            st.markdown("---")
-            st.markdown(f"#### {tab_info[tab_key]['header'].split()[1]} 데이터 조회")
-            display_data_views(tab_key, df_all_data)
+def render_footer(tab_key, df_all_data):
+    st.markdown("---")
+    st.header("데이터 조회")
 
-def render_footer():
-    st.header("FOOTER 영역")
+    snumber_query = st.text_input("SNumber를 입력하세요", key=f"snumber_search_bar_{tab_key}")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("SNumber 검색 실행", key=f"snumber_search_btn_{tab_key}"):
+            if snumber_query:
+                st.session_state.snumber_search[tab_key]['show'] = True
+                with st.spinner("데이터베이스에서 SNumber 검색 중..."):
+                    filtered_df = df_all_data[
+                        df_all_data['SNumber'].fillna('').astype(str).str.contains(snumber_query, case=False, na=False)
+                    ].copy()
+                
+                if not filtered_df.empty:
+                    st.success(f"'{snumber_query}'에 대한 {len(filtered_df)}건의 검색 결과를 찾았습니다.")
+                    st.session_state.snumber_search[tab_key]['results'] = filtered_df
+                else:
+                    st.warning(f"'{snumber_query}'에 대한 검색 결과가 없습니다.")
+                    st.session_state.snumber_search[tab_key]['results'] = pd.DataFrame()
+            else:
+                st.warning("SNumber를 입력해주세요.")
+                st.session_state.snumber_search[tab_key]['results'] = pd.DataFrame()
+    with col2:
+        if st.button("원본 DB 조회", key=f"view_last_db_{tab_key}"):
+            st.session_state.original_db_view[tab_key]['show'] = True
+            if st.session_state.analysis_results[tab_key] is not None:
+                st.success(f"{tab_key.upper()} 탭의 원본 데이터를 조회합니다.")
+                st.session_state.original_db_view[tab_key]['results'] = st.session_state.analysis_results[tab_key].copy()
+            else:
+                st.warning(f"먼저 {tab_key.upper()} 탭에서 '분석 실행' 버튼을 눌러 데이터를 분석해주세요.")
+                st.session_state.original_db_view[tab_key]['results'] = pd.DataFrame()
+
+    if st.session_state.snumber_search[tab_key]['show'] and not st.session_state.snumber_search[tab_key]['results'].empty:
+        st.dataframe(st.session_state.snumber_search[tab_key]['results'].reset_index(drop=True))
+    
+    if st.session_state.original_db_view[tab_key]['show'] and not st.session_state.original_db_view[tab_key]['results'].empty:
+        st.dataframe(st.session_state.original_db_view[tab_key]['results'].reset_index(drop=True))
+
     st.markdown("---")
     st.markdown("<p style='text-align:center'>Copyright © 2024</p>", unsafe_allow_html=True)
+
 
 def main():
     st.set_page_config(layout="wide")
@@ -158,19 +184,25 @@ def main():
     df_all_data['SemiAssyStartTime_dt'] = pd.to_datetime(df_all_data['SemiAssyStartTime'], errors='coerce')
     df_all_data['BatadcStamp_dt'] = pd.to_datetime(df_all_data['BatadcStamp'], errors='coerce')
 
-    # 컨테이너를 사용하여 레이아웃을 명확하게 분리
-    header_container = st.container()
-    main_container = st.container()
-    footer_container = st.container()
+    tab_info = {
+        'pcb': {'header': "파일 PCB 분석", 'date_col': 'PcbStartTime_dt'},
+        'fw': {'header': "파일 Fw 분석", 'date_col': 'FwStamp_dt'},
+        'rftx': {'header': "파일 RfTx 분석", 'date_col': 'RfTxStamp_dt'},
+        'semi': {'header': "파일 Semi 분석", 'date_col': 'SemiAssyStartTime_dt'},
+        'func': {'header': "파일 Func 분석", 'date_col': 'BatadcStamp_dt'}
+    }
 
-    with header_container:
-        render_header()
+    tabs = st.tabs(list(tab_info.keys()))
     
-    with main_container:
-        render_main_content(df_all_data)
+    # --- 헤더 영역 ---
+    render_header(tabs, tab_info, df_all_data)
 
-    with footer_container:
-        render_footer()
-            
+    # --- 메인 콘텐츠 및 푸터 영역 ---
+    for i, tab_key in enumerate(tab_info.keys()):
+        with tabs[i]:
+            selected_jig, jig_col_name = render_sidebar(tab_key, tab_info, df_all_data)
+            render_main_content(tab_key, tab_info, df_all_data, selected_jig, jig_col_name)
+            render_footer(tab_key, df_all_data)
+
 if __name__ == "__main__":
     main()
