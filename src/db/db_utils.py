@@ -8,7 +8,7 @@ def get_connection():
     SQLite 데이터베이스에 연결합니다.
     """
     try:
-        db_path = "SJ_TM2360E_v2.sqlite3"
+        db_path = "src/db/SJ_TM2360E_v2.sqlite3"
         conn = sqlite3.connect(db_path, check_same_thread=False)
         return conn
     except Exception as e:
