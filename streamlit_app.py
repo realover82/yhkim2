@@ -37,8 +37,8 @@ def initialize_session_state():
         st.session_state.jig_col_mapping = {
             'pcb': 'PcbMaxIrPwr',
             'fw': 'FwPC',
-            'rftx': 'RftxPC',
-            'semi': 'SemiAssyPC',
+            'rftx': 'RfTxPC',
+            'semi': 'SemiAssyMaxBatVolt',
             'func': 'BatadcPC',
         }
     if 'show_line_chart' not in st.session_state:
