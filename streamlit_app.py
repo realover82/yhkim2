@@ -67,11 +67,9 @@ def initialize_session_state():
         }
 
 # --- UI 렌더링 함수들 ---
-def render_header(tabs, tab_info, df_all_data):
+def render_header():
     st.title("리모컨 생산 데이터 분석 툴")
     st.markdown("---")
-    st.header("탭을 선택하여 분석할 데이터를 확인하세요.")
-    return tabs
 
 def render_sidebar(tab_key, tab_info, df_all_data):
     st.sidebar.header(f"{tab_info[tab_key]['header']} 제어")
@@ -192,12 +190,11 @@ def main():
         'func': {'header': "파일 Func 분석", 'date_col': 'BatadcStamp_dt'}
     }
 
+    # 헤더 영역은 사이드바 외에 별도로 렌더링
+    render_header()
+    
     tabs = st.tabs(list(tab_info.keys()))
     
-    # --- 헤더 영역 ---
-    render_header(tabs, tab_info, df_all_data)
-
-    # --- 메인 콘텐츠 및 푸터 영역 ---
     for i, tab_key in enumerate(tab_info.keys()):
         with tabs[i]:
             selected_jig, jig_col_name = render_sidebar(tab_key, tab_info, df_all_data)
