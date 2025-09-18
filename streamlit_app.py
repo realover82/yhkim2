@@ -5,13 +5,13 @@ import warnings
 import sys
 import os
 
-# 프로젝트 루트 디렉토리를 파이썬 경로에 추가하여 모듈을 찾을 수 있게 합니다.
-# 이 코드는 다른 import 문보다 먼저 위치해야 합니다.
+# 현재 파일의 절대 경로를 기준으로 프로젝트 루트 디렉토리를 찾습니다.
+# 이렇게 하면 Streamlit이 어떤 경로에서 실행되든 모듈을 올바르게 찾을 수 있습니다.
 project_root = os.path.dirname(os.path.abspath(__file__))
 if project_root not in sys.path:
-    sys.path.append(project_root)
+    sys.path.insert(0, project_root)
 
-# 프로젝트 내부 모듈 import
+# 프로젝트 내부 모듈을 import 합니다.
 try:
     from src.db.db_utils import get_connection
     from src.services.analysis_service import analyze_data
