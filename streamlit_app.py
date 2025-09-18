@@ -14,7 +14,7 @@ if project_root not in sys.path:
 # 프로젝트 내부 모듈 import
 from src.db.db_utils import get_connection
 from src.services.analysis_service import analyze_data
-from src.utils.ui_helpers import display_analysis_result, display_data_views
+from src.utils.ui_helpers import display_analysis_result, display_data_views, display_data_views
 
 warnings.filterwarnings('ignore')
 
