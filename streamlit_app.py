@@ -2,6 +2,14 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, date
 import warnings
+import sys
+import os
+
+# 프로젝트 루트 디렉토리를 파이썬 경로에 추가하여 모듈을 찾을 수 있게 합니다.
+# 이 코드는 다른 import 문보다 먼저 위치해야 합니다.
+project_root = os.path.dirname(os.path.abspath(__file__))
+if project_root not in sys.path:
+    sys.path.append(project_root)
 
 # 프로젝트 내부 모듈 import
 from src.db.db_utils import get_connection
@@ -33,6 +41,22 @@ def initialize_session_state():
     if 'analysis_status' not in st.session_state:
         st.session_state.analysis_status = {
             key: {'analyzed': False} for key in ['pcb', 'fw', 'rftx', 'semi', 'func']
+        }
+    if 'snumber_search' not in st.session_state:
+        st.session_state.snumber_search = {
+            'pcb': {'results': pd.DataFrame(), 'show': False},
+            'fw': {'results': pd.DataFrame(), 'show': False},
+            'rftx': {'results': pd.DataFrame(), 'show': False},
+            'semi': {'results': pd.DataFrame(), 'show': False},
+            'func': {'results': pd.DataFrame(), 'show': False},
+        }
+    if 'original_db_view' not in st.session_state:
+        st.session_state.original_db_view = {
+            'pcb': {'results': pd.DataFrame(), 'show': False},
+            'fw': {'results': pd.DataFrame(), 'show': False},
+            'rftx': {'results': pd.DataFrame(), 'show': False},
+            'semi': {'results': pd.DataFrame(), 'show': False},
+            'func': {'results': pd.DataFrame(), 'show': False},
         }
     
 def main():
@@ -75,8 +99,8 @@ def main():
             jig_col_name = st.session_state.jig_col_mapping[tab_key]
             
             unique_jigs = df_all_data[jig_col_name].dropna().unique()
-            jig_options = ['모든 PC'] + sorted(list(unique_jigs))
-            selected_jig = st.selectbox("PC (Jig) 선택", jig_options, key=f"pc_select_{tab_key}")
+            pc_options = ['모든 PC'] + sorted(list(unique_jigs))
+            selected_jig = st.selectbox("PC (Jig) 선택", pc_options, key=f"pc_select_{tab_key}")
 
             df_dates = df_all_data[tab_info[tab_key]['date_col']].dt.date.dropna()
             min_date = df_dates.min() if not df_dates.empty else date.today()
