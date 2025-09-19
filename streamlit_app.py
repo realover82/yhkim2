@@ -178,4 +178,8 @@ def main():
     st.markdown("<p style='text-align:center'>Copyright © 2024</p>", unsafe_allow_html=True)
             
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        st.error(f"❌ 앱 실행 중 치명적 오류 발생: {e}")
+        st.info("개발자에게 문의하거나 로그를 확인해주세요.")
