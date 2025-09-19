@@ -73,10 +73,24 @@ def main():
 
     initialize_session_state()
     
-    conn = get_connection()
-    if conn is None:
-        return
+    # 모듈이 로드되지 않았으면 앱 실행 중지
+    if not modules_loaded:
+        st.error("❌ 필수 모듈을 로드할 수 없어 앱 실행을 중지합니다.")
+        st.info("위의 해결 방법을 따라 폴더 구조를 수정한 후 다시 실행해주세요.")
+        st.stop()
+    
+    # 데이터베이스 연결 시도
+    try:
+        conn = get_connection()
+        if conn is None:
+            st.error("❌ 데이터베이스 연결에 실패했습니다.")
+            st.info("db_utils.py 파일과 데이터베이스 파일을 확인해주세요.")
+            st.stop()
+    except Exception as e:
+        st.error(f"❌ 데이터베이스 연결 중 예외 발생: {e}")
+        st.stop()
         
+    # 데이터베이스 테이블 조회 전 테이블 존재 여부 확인
     try:
         # 테이블 목록 확인
         table_check = pd.read_sql_query("SELECT name FROM sqlite_master WHERE type='table';", conn)
