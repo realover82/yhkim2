@@ -75,6 +75,7 @@ def read_data_from_db(conn, table_name):
         return df
     except Exception as e:
         st.error(f"테이블 '{table_name}'에서 데이터를 불러오는 중 오류가 발생했습니다: {e}")
+        st.error(f"상세 오류: {e}")
         return pd.DataFrame()
 
 def show_database_info(conn):
