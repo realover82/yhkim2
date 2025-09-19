@@ -307,5 +307,7 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
+        print(f"❌ 앱 실행 중 치명적 오류 발생: {e}", file=sys.stderr)
+        print("개발자에게 문의하거나 로그를 확인해주세요.", file=sys.stderr)
         st.error(f"❌ 앱 실행 중 치명적 오류 발생: {e}")
         st.info("개발자에게 문의하거나 로그를 확인해주세요.")
