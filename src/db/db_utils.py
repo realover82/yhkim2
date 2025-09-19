@@ -16,7 +16,7 @@ def get_connection():
     """
     # GCS URL과 로컬 저장 경로
     gcs_url = 'https://storage.googleapis.com/webdb5/SJ_TM2360E/SJ_TM2360E.sqlite3'
-    db_path = r"C:\Users\samjin\test5\yhkim2\src\db\SJ_TM2360E_v3.sqlite3"  # 루트에 바로 저장 (경로 단순화)
+    db_path = "./src/db/SJ_TM2360E.sqlite3"  # 루트에 바로 저장 (경로 단순화)
     
     # os.makedirs(os.path.dirname(db_path), exist_ok=True)
     st.info("--- 2.3. 데이터베이스 파일 연결 시도 ---") # 👈 여기에 추가
