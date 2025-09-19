@@ -15,7 +15,7 @@ def get_connection():
     """
     # Google Drive 파일 ID와 로컬 저장 경로를 정의합니다.
     file_id = '1srULKQgBNiNTWHTWatpKS0faeJ2xD8SN'
-    db_path = "src/db/SJ_TM2360E_v2.sqlite3"
+    db_path = "src/db/SJ_TM2360E.sqlite3"
 
     # src/db 디렉터리가 없으면 생성합니다.
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
@@ -24,7 +24,7 @@ def get_connection():
     if not os.path.exists(db_path) or os.path.getsize(db_path) < 10000000: # 10MB 이상으로 검증
         st.info("🔄 유효한 로컬 파일이 없습니다. Google Drive에서 다운로드를 시작합니다...")
         try:
-            gdown.download(f'https://drive.google.com/uc?id={file_id}', db_path, quiet=False)
+            gdown.download(f'https://drive.google.com/uc?id={file_id}', db_path, quiet=False, timeout=6000)
             
             if os.path.exists(db_path) and os.path.getsize(db_path) > 10000000:
                 st.success("✅ Google Drive 다운로드 완료!")
