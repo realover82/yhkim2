@@ -203,7 +203,7 @@ def main():
             else:
                 st.warning("날짜 범위를 올바르게 선택해주세요.")
                 df_filtered = pd.DataFrame()
->>>>>>> parent of a357b44 (Add new feature for user authentication)
+# >>>>>>> parent of a357b44 (Add new feature for user authentication)
             
             st.info("--- 4. 날짜 컬럼 변환 시작 ---")  # 👈 이 부분 추가
             st.write("테이블의 실제 컬럼들:") # 👈 이 부분 추가
@@ -271,7 +271,7 @@ def main():
             else:
                 st.warning(f"먼저 {tab_key.upper()} 탭에서 '분석 실행' 버튼을 눌러 데이터를 분석해주세요.")
                 st.session_state.original_db_view[tab_key]['results'] = pd.DataFrame()
->>>>>>> parent of a357b44 (Add new feature for user authentication)
+# >>>>>>> parent of a357b44 (Add new feature for user authentication)
 
                 date_col = tab_info[tab_key]['date_col']
                 if date_col not in df_all_data.columns:
@@ -366,7 +366,7 @@ def main():
             render_footer(tab_key, df_all_data)
 
 
->>>>>>> parent of a357b44 (Add new feature for user authentication)
+# >>>>>>> parent of a357b44 (Add new feature for user authentication)
 if __name__ == "__main__":
     try:
         main()
