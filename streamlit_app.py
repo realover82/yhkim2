@@ -16,7 +16,7 @@ if project_root not in sys.path:
 try:
     from src.db.db_utils import get_connection
     from src.services.analysis_service import analyze_data
-    from src.utils.ui_helpers import display_analysis_result, display_data_views
+    from src.utils.ui_helpers import display_analysis_result
 except ImportError as e:
     st.error(f"오류: 필요한 모듈을 찾을 수 없습니다. 파일 경로를 확인해주세요.")
     st.error(f"상세 오류: {e}")
@@ -65,58 +65,10 @@ def initialize_session_state():
             'semi': {'results': pd.DataFrame(), 'show': False},
             'func': {'results': pd.DataFrame(), 'show': False},
         }
+    if 'selected_tab_key' not in st.session_state:
+        st.session_state.selected_tab_key = 'pcb'
 
-# --- UI 렌더링 함수들 ---
-def render_header():
-    st.title("리모컨 생산 데이터 분석 툴")
-    st.markdown("---")
-
-def render_main_content(tab_key, tab_info, df_all_data):
-    st.header(f"'{tab_info[tab_key]['header']}' 제어")
-    
-    jig_col_name = st.session_state.jig_col_mapping[tab_key]
-    
-    # 데이터프레임에 해당 컬럼이 없는 경우 '전체'로 처리
-    if jig_col_name not in df_all_data.columns:
-        jig_col_name = '__total_group__'
-        df_all_data[jig_col_name] = '전체'
-
-    unique_jigs = df_all_data[jig_col_name].dropna().unique()
-    pc_options = ['모든 PC'] + sorted(list(unique_jigs))
-    selected_jig = st.selectbox("PC (Jig) 선택", pc_options, key=f"pc_select_{tab_key}")
-
-    df_dates = df_all_data[tab_info[tab_key]['date_col']].dt.date.dropna()
-    min_date = df_dates.min() if not df_dates.empty else date.today()
-    max_date = df_dates.max() if not df_dates.dropna().empty else date.today()
-    selected_dates = st.date_input("날짜 범위 선택", value=(min_date, max_date), key=f"dates_{tab_key}")
-    
-    if st.button("분석 실행", key=f"analyze_{tab_key}"):
-        with st.spinner("데이터 분석 및 저장 중..."):
-            if len(selected_dates) == 2:
-                start_date, end_date = selected_dates
-                df_filtered = df_all_data[
-                    (df_all_data[tab_info[tab_key]['date_col']].dt.date >= start_date) &
-                    (df_all_data[tab_info[tab_key]['date_col']].dt.date <= end_date)
-                ].copy()
-                if selected_jig != '모든 PC':
-                    df_filtered = df_filtered[df_filtered[jig_col_name] == selected_jig].copy()
-            else:
-                st.warning("날짜 범위를 올바르게 선택해주세요.")
-                df_filtered = pd.DataFrame()
-            
-            st.session_state.analysis_results[tab_key] = df_filtered
-            st.session_state.analysis_data[tab_key] = analyze_data(df_filtered, tab_info[tab_key]['date_col'], jig_col_name)
-            st.session_state.analysis_time[tab_key] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            st.session_state.analysis_status[tab_key]['analyzed'] = True
-        st.success("분석 완료! 결과가 저장되었습니다.")
-    
-    if st.session_state.analysis_status[tab_key]['analyzed']:
-        display_analysis_result(tab_key, tab_info[tab_key]['header'], tab_info[tab_key]['date_col'],
-                                selected_jig=selected_jig if selected_jig != '모든 PC' else None,
-                                used_jig_col=st.session_state.analysis_data[tab_key][2])
-
-
-def render_footer(tab_key, df_all_data):
+def display_data_views(tab_key, df_all_data):
     st.markdown("---")
     st.header("데이터 조회")
 
@@ -190,16 +142,65 @@ def main():
         'func': {'header': "파일 Func 분석", 'date_col': 'BatadcStamp_dt'}
     }
     
+    # 사이드바에서 분석 항목 선택
+    selected_tab_key = st.sidebar.selectbox(
+        "분석 항목을 선택하세요",
+        options=list(tab_info.keys()),
+        format_func=lambda x: tab_info[x]['header'],
+        key='tab_selectbox'
+    )
+    
+    st.session_state.selected_tab_key = selected_tab_key
+    
     # 헤더 영역
-    render_header()
-    
-    tabs = st.tabs(list(tab_info.keys()))
-    
-    for i, tab_key in enumerate(tab_info.keys()):
-        with tabs[i]:
-            render_main_content(tab_key, tab_info, df_all_data)
-            render_footer(tab_key, df_all_data)
+    st.title("리모컨 생산 데이터 분석 툴")
+    st.markdown("---")
 
+    # 메인 콘텐츠
+    tab_key = st.session_state.selected_tab_key
+    
+    st.header(tab_info[tab_key]['header'])
+
+    jig_col_name = st.session_state.jig_col_mapping[tab_key]
+    if jig_col_name not in df_all_data.columns:
+        jig_col_name = '__total_group__'
+        df_all_data[jig_col_name] = '전체'
+
+    unique_jigs = df_all_data[jig_col_name].dropna().unique()
+    pc_options = ['모든 PC'] + sorted(list(unique_jigs))
+    selected_jig = st.selectbox("PC (Jig) 선택", pc_options, key=f"pc_select_{tab_key}")
+
+    df_dates = df_all_data[tab_info[tab_key]['date_col']].dt.date.dropna()
+    min_date = df_dates.min() if not df_dates.empty else date.today()
+    max_date = df_dates.max() if not df_dates.dropna().empty else date.today()
+    selected_dates = st.date_input("날짜 범위 선택", value=(min_date, max_date), key=f"dates_{tab_key}")
+    
+    if st.button("분석 실행", key=f"analyze_{tab_key}"):
+        with st.spinner("데이터 분석 및 저장 중..."):
+            if len(selected_dates) == 2:
+                start_date, end_date = selected_dates
+                df_filtered = df_all_data[
+                    (df_all_data[tab_info[tab_key]['date_col']].dt.date >= start_date) &
+                    (df_all_data[tab_info[tab_key]['date_col']].dt.date <= end_date)
+                ].copy()
+                if selected_jig != '모든 PC':
+                    df_filtered = df_filtered[df_filtered[jig_col_name] == selected_jig].copy()
+            else:
+                st.warning("날짜 범위를 올바르게 선택해주세요.")
+                df_filtered = pd.DataFrame()
+            
+            st.session_state.analysis_results[tab_key] = df_filtered
+            st.session_state.analysis_data[tab_key] = analyze_data(df_filtered, tab_info[tab_key]['date_col'], jig_col_name)
+            st.session_state.analysis_time[tab_key] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            st.session_state.analysis_status[tab_key]['analyzed'] = True
+        st.success("분석 완료! 결과가 저장되었습니다.")
+    
+    if st.session_state.analysis_status[tab_key]['analyzed']:
+        display_analysis_result(tab_key, tab_info[tab_key]['header'], tab_info[tab_key]['date_col'],
+                                selected_jig=selected_jig if selected_jig != '모든 PC' else None,
+                                used_jig_col=st.session_state.analysis_data[tab_key][2])
+    
+    display_data_views(tab_key, df_all_data)
 
 if __name__ == "__main__":
     main()
