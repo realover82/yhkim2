@@ -6,19 +6,17 @@ import sys
 import os
 
 # 현재 파일의 절대 경로를 기준으로 프로젝트 루트 디렉토리를 찾습니다.
-# 이 코드를 통해 Streamlit이 어떤 경로에서 실행되든 모듈을 올바르게 찾을 수 있습니다.
-# streamlit_app.py와 src 폴더가 같은 위치에 있어야 합니다.
 project_root = os.path.dirname(os.path.abspath(__file__))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 # 프로젝트 내부 모듈을 import 합니다.
 try:
-    from src.db.db_utils import get_connection
+    from src.db.db_utils import get_connection, read_data_from_db
     from src.services.analysis_service import analyze_data
     from src.utils.ui_helpers import display_analysis_result, display_data_views
 except ImportError as e:
-    st.error(f"오류: 필요한 모듈을 찾을 수 없습니다. 파일 경로를 확인해주세요.")
+    st.error(f"❌ 모듈 로드 실패: {e}")
     st.error(f"상세 오류: {e}")
     st.info("streamlit_app.py 파일이 'src' 폴더와 같은 위치에 있는지 확인해주세요.")
     st.stop()
@@ -65,69 +63,113 @@ def initialize_session_state():
             'semi': {'results': pd.DataFrame(), 'show': False},
             'func': {'results': pd.DataFrame(), 'show': False},
         }
-    
-def main():
-    st.set_page_config(layout="wide")
+
+def render_header():
     st.title("리모컨 생산 데이터 분석 툴")
     st.markdown("---")
 
-    initialize_session_state()
-    
-    # 모듈이 로드되지 않았으면 앱 실행 중지
-    if not modules_loaded:
-        st.error("❌ 필수 모듈을 로드할 수 없어 앱 실행을 중지합니다.")
-        st.info("위의 해결 방법을 따라 폴더 구조를 수정한 후 다시 실행해주세요.")
-        st.stop()
-    
-    # 데이터베이스 연결 시도
-    try:
-        conn = get_connection()
-        if conn is None:
-            st.error("❌ 데이터베이스 연결에 실패했습니다.")
-            st.info("db_utils.py 파일과 데이터베이스 파일을 확인해주세요.")
-            st.stop()
-    except Exception as e:
-        st.error(f"❌ 데이터베이스 연결 중 예외 발생: {e}")
-        st.stop()
-        
-    # 데이터베이스 테이블 조회 전 테이블 존재 여부 확인
-    try:
-        # 테이블 목록 확인
-        table_check = pd.read_sql_query("SELECT name FROM sqlite_master WHERE type='table';", conn)
-        st.success(f"✅ 데이터베이스 연결 성공! {len(table_check)}개의 테이블이 있습니다.")
-        
-        with st.expander("데이터베이스 테이블 목록 보기"):
-            st.write("존재하는 테이블들:")
-            st.dataframe(table_check)
-        
-        # historyinspection 테이블이 존재하는지 확인
-        available_tables = table_check['name'].str.lower().tolist()
-        target_table = None
-        
-        # 가능한 테이블 이름들 확인
-        possible_names = ['historyinspection', 'history_inspection', 'inspection', 'history']
-        for name in possible_names:
-            if name.lower() in available_tables:
-                target_table = table_check[table_check['name'].str.lower() == name.lower()]['name'].iloc[0]
-                break
-        
-        if target_table:
-            df_all_data = pd.read_sql_query(f"SELECT * FROM {target_table};", conn)
-            st.success(f"✅ '{target_table}' 테이블 로드 완료! (총 {len(df_all_data):,}개 레코드)")
-        else:
-            st.error("❌ 'historyinspection' 또는 유사한 테이블을 찾을 수 없습니다.")
-            st.info("위의 테이블 목록에서 올바른 테이블 이름을 확인하고 코드를 수정해주세요.")
-            st.stop()
-            
-    except Exception as e:
-        st.error(f"데이터베이스에서 'historyinspection' 테이블을 불러오는 중 오류가 발생했습니다: {e}")
-        return
+def render_main_content(df_all_data, tab_key, tab_info):
+    st.header(tab_info[tab_key]['header'])
 
-    df_all_data['PcbStartTime_dt'] = pd.to_datetime(df_all_data['PcbStartTime'], errors='coerce')
-    df_all_data['FwStamp_dt'] = pd.to_datetime(df_all_data['FwStamp'], errors='coerce')
-    df_all_data['RfTxStamp_dt'] = pd.to_datetime(df_all_data['RfTxStamp'], errors='coerce')
-    df_all_data['SemiAssyStartTime_dt'] = pd.to_datetime(df_all_data['SemiAssyStartTime'], errors='coerce')
-    df_all_data['BatadcStamp_dt'] = pd.to_datetime(df_all_data['BatadcStamp'], errors='coerce')
+    try:
+        jig_col_name = st.session_state.jig_col_mapping[tab_key]
+        if jig_col_name not in df_all_data.columns:
+            st.warning(f"⚠️ '{jig_col_name}' 컬럼을 찾을 수 없습니다. 'SNumber'로 대체합니다.")
+            jig_col_name = 'SNumber'
+        
+        unique_jigs = df_all_data[jig_col_name].dropna().unique()
+        pc_options = ['모든 PC'] + sorted(list(unique_jigs))
+        selected_jig = st.selectbox("PC (Jig) 선택", pc_options, key=f"pc_select_{tab_key}")
+
+        date_col = tab_info[tab_key]['date_col']
+        if date_col not in df_all_data.columns:
+            st.error(f"❌ 날짜 컬럼 '{date_col}'을 찾을 수 없습니다.")
+            return # 이 탭의 실행을 중단합니다.
+        
+        df_dates = df_all_data[date_col].dt.date.dropna()
+        if not df_dates.empty:
+            min_date = df_dates.min()
+            max_date = df_dates.max()
+        else:
+            min_date = max_date = date.today()
+        
+        selected_dates = st.date_input("날짜 범위 선택", value=(min_date, max_date), key=f"dates_{tab_key}")
+        
+        if st.button("분석 실행", key=f"analyze_{tab_key}"):
+            with st.spinner("데이터 분석 및 저장 중..."):
+                if len(selected_dates) == 2:
+                    start_date, end_date = selected_dates
+                    df_filtered = df_all_data[
+                        (df_all_data[date_col].dt.date >= start_date) &
+                        (df_all_data[date_col].dt.date <= end_date)
+                    ].copy()
+                    if selected_jig != '모든 PC':
+                        df_filtered = df_filtered[df_filtered[jig_col_name] == selected_jig].copy()
+                else:
+                    st.warning("날짜 범위를 올바르게 선택해주세요.")
+                    df_filtered = pd.DataFrame()
+                
+                st.session_state.analysis_results[tab_key] = df_filtered
+                st.session_state.analysis_data[tab_key] = analyze_data(df_filtered, date_col, jig_col_name)
+                st.session_state.analysis_time[tab_key] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                st.session_state.analysis_status[tab_key]['analyzed'] = True
+            st.success("분석 완료! 결과가 저장되었습니다.")
+
+        if st.session_state.analysis_status[tab_key]['analyzed']:
+            display_analysis_result(tab_key, tab_info[tab_key]['header'], date_col,
+                                    selected_jig=selected_jig if selected_jig != '모든 PC' else None,
+                                    used_jig_col=st.session_state.analysis_data[tab_key][2])
+        
+        st.markdown("---")
+        st.markdown(f"#### {tab_info[tab_key]['header'].split()[1]} 데이터 조회")
+        display_data_views(tab_key, df_all_data)
+        
+    except Exception as e:
+        st.error(f"❌ 탭 '{tab_key}' 처리 중 오류: {e}")
+        st.info("이 탭은 건너뛰고 다른 탭을 사용해보세요.")
+
+def render_footer():
+    st.markdown("---")
+    st.markdown("<p style='text-align:center'>Copyright © 2024</p>", unsafe_allow_html=True)
+            
+def main():
+    st.set_page_config(layout="wide")
+    initialize_session_state()
+
+    st.title("리모컨 생산 데이터 분석 툴")
+    st.markdown("---")
+
+    st.info("🔄 데이터베이스 연결을 시도합니다...")
+    conn = get_connection()
+    if conn is None:
+        st.error("❌ 데이터베이스 연결에 실패했습니다. 앱을 중단합니다.")
+        st.stop()
+    st.success("✅ 데이터베이스 연결 성공!")
+
+    st.info("🔄 데이터를 불러오고 있습니다...")
+    try:
+        df_all_data = read_data_from_db(conn, 'historyinspection')
+        if df_all_data is None or df_all_data.empty:
+            st.error("❌ 'historyinspection' 테이블에서 데이터를 불러오지 못했습니다.")
+            st.stop()
+        st.success(f"✅ 'historyinspection' 테이블 로드 완료! (총 {len(df_all_data):,}개 레코드)")
+    except Exception as e:
+        st.error(f"❌ 데이터베이스 조회 중 오류: {e}")
+        st.stop()
+
+    st.info("🔄 날짜 컬럼을 변환하고 있습니다...")
+    try:
+        df_all_data['PcbStartTime_dt'] = pd.to_datetime(df_all_data['PcbStartTime'], errors='coerce')
+        df_all_data['FwStamp_dt'] = pd.to_datetime(df_all_data['FwStamp'], errors='coerce')
+        df_all_data['RfTxStamp_dt'] = pd.to_datetime(df_all_data['RfTxStamp'], errors='coerce')
+        df_all_data['SemiAssyStartTime_dt'] = pd.to_datetime(df_all_data['SemiAssyStartTime'], errors='coerce')
+        df_all_data['BatadcStamp_dt'] = pd.to_datetime(df_all_data['BatadcStamp'], errors='coerce')
+        st.success("✅ 날짜 컬럼 변환 완료")
+    except KeyError as e:
+        st.error(f"❌ 날짜 컬럼을 찾을 수 없습니다: {e}")
+        st.info("데이터베이스의 실제 컬럼명을 확인하고 코드를 수정해주세요.")
+        st.write("현재 데이터베이스 컬럼:", list(df_all_data.columns))
+        st.stop()
 
     tab_info = {
         'pcb': {'header': "파일 PCB (Pcb_Process)", 'date_col': 'PcbStartTime_dt'},
@@ -138,62 +180,11 @@ def main():
     }
 
     tabs = st.tabs(list(tab_info.keys()))
-
     for i, tab_key in enumerate(tab_info.keys()):
         with tabs[i]:
-            st.header(tab_info[tab_key]['header'])
+            render_main_content(df_all_data, tab_key, tab_info)
 
-            jig_col_name = st.session_state.jig_col_mapping[tab_key]
-            
-            # DataFrame에 해당 컬럼이 있는지 확인하고 없을 경우 'SNumber'를 사용
-            if jig_col_name not in df_all_data.columns:
-                jig_col_name = 'SNumber'
-                st.warning(f"'{st.session_state.jig_col_mapping[tab_key]}' 컬럼이 없어 'SNumber'로 대체합니다.")
-            
-            unique_jigs = df_all_data[jig_col_name].dropna().unique()
-            pc_options = ['모든 PC'] + sorted(list(unique_jigs))
-            selected_jig = st.selectbox("PC (Jig) 선택", pc_options, key=f"pc_select_{tab_key}")
-
-            df_dates = df_all_data[tab_info[tab_key]['date_col']].dt.date.dropna()
-            min_date = df_dates.min() if not df_dates.empty else date.today()
-            max_date = df_dates.max() if not df_dates.dropna().empty else date.today()
-            selected_dates = st.date_input("날짜 범위 선택", value=(min_date, max_date), key=f"dates_{tab_key}")
-            
-            if st.button("분석 실행", key=f"analyze_{tab_key}"):
-                with st.spinner("데이터 분석 및 저장 중..."):
-                    if len(selected_dates) == 2:
-                        start_date, end_date = selected_dates
-                        df_filtered = df_all_data[
-                            (df_all_data[tab_info[tab_key]['date_col']].dt.date >= start_date) &
-                            (df_all_data[tab_info[tab_key]['date_col']].dt.date <= end_date)
-                        ].copy()
-                        if selected_jig != '모든 PC':
-                            df_filtered = df_filtered[df_filtered[jig_col_name] == selected_jig].copy()
-                    else:
-                        st.warning("날짜 범위를 올바르게 선택해주세요.")
-                        df_filtered = pd.DataFrame()
-                    
-                    st.session_state.analysis_results[tab_key] = df_filtered
-                    st.session_state.analysis_data[tab_key] = analyze_data(df_filtered, tab_info[tab_key]['date_col'], jig_col_name)
-                    st.session_state.analysis_time[tab_key] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    st.session_state.analysis_status[tab_key]['analyzed'] = True
-                st.success("분석 완료! 결과가 저장되었습니다.")
-
-            if st.session_state.analysis_status[tab_key]['analyzed']:
-                display_analysis_result(tab_key, tab_info[tab_key]['header'], tab_info[tab_key]['date_col'],
-                                        selected_jig=selected_jig if selected_jig != '모든 PC' else None,
-                                        used_jig_col=st.session_state.analysis_data[tab_key][2])
-            
-            st.markdown("---")
-            st.markdown(f"#### {tab_info[tab_key]['header'].split()[1]} 데이터 조회")
-            display_data_views(tab_key, df_all_data)
-
-    st.markdown("---")
-    st.markdown("<p style='text-align:center'>Copyright © 2024</p>", unsafe_allow_html=True)
+    render_footer()
             
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        st.error(f"❌ 앱 실행 중 치명적 오류 발생: {e}")
-        st.info("개발자에게 문의하거나 로그를 확인해주세요.")
+    main()
