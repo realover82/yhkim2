@@ -141,7 +141,7 @@ def main():
     st.set_page_config(layout="wide")
     st.title("리모컨 생산 데이터 분석 툴")
     st.markdown("---")
-
+    st.info("--- 1. 앱 시작 및 모듈 로드 완료 ---") # 👈 이처럼 추가하세요
     initialize_session_state()
     
     # 모듈이 로드되지 않았으면 앱 실행 중지
@@ -149,7 +149,7 @@ def main():
         st.error("❌ 필수 모듈을 로드할 수 없어 앱 실행을 중지합니다.")
         st.info("위의 해결 방법을 따라 폴더 구조를 수정한 후 다시 실행해주세요.")
         st.stop()
-    
+    st.info("--- 2. 데이터베이스 연결 시도 ---") # 👈 이처럼 추가하세요
     # 데이터베이스 연결 시도
     try:
         conn = get_connection()
@@ -160,7 +160,8 @@ def main():
     except Exception as e:
         st.error(f"❌ 데이터베이스 연결 중 예외 발생: {e}")
         st.stop()
-        
+    
+    st.info("--- 3. 데이터베이스 연결 성공 및 테이블 로드 시작 ---") # 👈 이처럼 추가하세요    
     # 데이터베이스 테이블 조회 전 테이블 존재 여부 확인
     try:
         # 테이블 목록 확인
