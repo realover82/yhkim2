@@ -78,7 +78,33 @@ def main():
         return
         
     try:
-        df_all_data = pd.read_sql_query("SELECT * FROM historyinspection;", conn)
+        # 테이블 목록 확인
+        table_check = pd.read_sql_query("SELECT name FROM sqlite_master WHERE type='table';", conn)
+        st.success(f"✅ 데이터베이스 연결 성공! {len(table_check)}개의 테이블이 있습니다.")
+        
+        with st.expander("데이터베이스 테이블 목록 보기"):
+            st.write("존재하는 테이블들:")
+            st.dataframe(table_check)
+        
+        # historyinspection 테이블이 존재하는지 확인
+        available_tables = table_check['name'].str.lower().tolist()
+        target_table = None
+        
+        # 가능한 테이블 이름들 확인
+        possible_names = ['historyinspection', 'history_inspection', 'inspection', 'history']
+        for name in possible_names:
+            if name.lower() in available_tables:
+                target_table = table_check[table_check['name'].str.lower() == name.lower()]['name'].iloc[0]
+                break
+        
+        if target_table:
+            df_all_data = pd.read_sql_query(f"SELECT * FROM {target_table};", conn)
+            st.success(f"✅ '{target_table}' 테이블 로드 완료! (총 {len(df_all_data):,}개 레코드)")
+        else:
+            st.error("❌ 'historyinspection' 또는 유사한 테이블을 찾을 수 없습니다.")
+            st.info("위의 테이블 목록에서 올바른 테이블 이름을 확인하고 코드를 수정해주세요.")
+            st.stop()
+            
     except Exception as e:
         st.error(f"데이터베이스에서 'historyinspection' 테이블을 불러오는 중 오류가 발생했습니다: {e}")
         return
