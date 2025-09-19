@@ -201,6 +201,10 @@ def main():
         if target_table:
             df_all_data = pd.read_sql_query(f"SELECT * FROM {target_table};", conn)
             st.success(f"✅ '{target_table}' 테이블 로드 완료! (총 {len(df_all_data):,}개 레코드)")
+            
+            st.info("--- 4. 날짜 컬럼 변환 시작 ---")  # 👈 이 부분 추가
+            st.write("테이블의 실제 컬럼들:") # 👈 이 부분 추가
+            st.write(list(df_all_data.columns)) # 👈 이 부분 추가
         else:
             st.error("❌ 'historyinspection' 또는 유사한 테이블을 찾을 수 없습니다.")
             st.info("위의 테이블 목록에서 올바른 테이블 이름을 확인하고 코드를 수정해주세요.")
