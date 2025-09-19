@@ -176,33 +176,7 @@ def main():
         st.error(f"❌ 데이터베이스 연결 중 예외 발생: {e}")
         st.stop()
     
-<<<<<<< HEAD
-    st.info("--- 3. 데이터베이스 연결 성공 및 테이블 로드 시작 ---") # 👈 이처럼 추가하세요    
-    # 데이터베이스 테이블 조회 전 테이블 존재 여부 확인
-    try:
-        # 테이블 목록 확인
-        table_check = pd.read_sql_query("SELECT name FROM sqlite_master WHERE type='table';", conn)
-        st.success(f"✅ 데이터베이스 연결 성공! {len(table_check)}개의 테이블이 있습니다.")
-        
-        with st.expander("데이터베이스 테이블 목록 보기"):
-            st.write("존재하는 테이블들:")
-            st.dataframe(table_check)
-        
-        # historyinspection 테이블이 존재하는지 확인
-        available_tables = table_check['name'].str.lower().tolist()
-        target_table = None
-        
-        # 가능한 테이블 이름들 확인
-        possible_names = ['historyinspection', 'history_inspection', 'inspection', 'history']
-        for name in possible_names:
-            if name.lower() in available_tables:
-                target_table = table_check[table_check['name'].str.lower() == name.lower()]['name'].iloc[0]
-                break
-        
-        if target_table:
-            df_all_data = pd.read_sql_query(f"SELECT * FROM {target_table};", conn)
-            st.success(f"✅ '{target_table}' 테이블 로드 완료! (총 {len(df_all_data):,}개 레코드)")
-=======
+
     if jig_col_name not in df_all_data.columns:
         jig_col_name = '__total_group__'
         df_all_data[jig_col_name] = '전체'
@@ -266,27 +240,7 @@ def main():
         'func': {'header': "파일 Func (Func_Process)", 'date_col': 'BatadcStamp_dt'}
     }
 
-<<<<<<< HEAD
-    tabs = st.tabs(list(tab_info.keys()))
 
-    for i, tab_key in enumerate(tab_info.keys()):
-        with tabs[i]:
-            st.header(tab_info[tab_key]['header'])
-
-            try:
-                jig_col_name = st.session_state.jig_col_mapping[tab_key]
-                
-                # 컬럼 존재 확인
-                if jig_col_name not in df_all_data.columns:
-                    st.warning(f"⚠️ '{jig_col_name}' 컬럼을 찾을 수 없습니다.")
-                    st.info("사용 가능한 컬럼:")
-                    st.write([col for col in df_all_data.columns if 'PC' in col or 'Jig' in col])
-                    continue
-                
-                unique_jigs = df_all_data[jig_col_name].dropna().unique()
-                pc_options = ['모든 PC'] + sorted(list(unique_jigs))
-                selected_jig = st.selectbox("PC (Jig) 선택", pc_options, key=f"pc_select_{tab_key}")
-=======
     snumber_query = st.text_input("SNumber를 입력하세요", key=f"snumber_search_bar_{tab_key}")
     
     col1, col2 = st.columns(2)
@@ -368,9 +322,7 @@ def main():
 
     st.markdown("---")
     st.markdown("<p style='text-align:center'>Copyright © 2024</p>", unsafe_allow_html=True)
-<<<<<<< HEAD
-            
-=======
+
 
 
 def main():
