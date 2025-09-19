@@ -10,13 +10,17 @@ warnings.filterwarnings('ignore')
 
 @st.cache_resource
 def get_connection():
+    st.info("--- 2.1. get_connection() 함수 실행 ---") # 👈 여기에 추가
     """
     구글 클라우드 스토리지에서 파일을 다운로드하고 SQLite 연결을 반환합니다.
     """
     # GCS URL과 로컬 저장 경로
     gcs_url = 'https://storage.googleapis.com/webdb5/SJ_TM2360E/SJ_TM2360E.sqlite3'
-    db_path = "SJ_TM2360E.sqlite3"  # 루트에 바로 저장 (경로 단순화)
-
+    db_path = "C:\Users\samjin\test5\yhkim2\src\db\SJ_TM2360E_v3.sqlite3"  # 루트에 바로 저장 (경로 단순화)
+    
+    # os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    st.info("--- 2.3. 데이터베이스 파일 연결 시도 ---") # 👈 여기에 추가
+    
     try:
         # 파일이 존재하지 않거나 크기가 작으면 다운로드
         if not os.path.exists(db_path) or os.path.getsize(db_path) < 10000000:
@@ -61,7 +65,7 @@ def get_connection():
 
         # SQLite 연결
         conn = sqlite3.connect(db_path, check_same_thread=False)
-        
+        st.success("✅ 데이터베이스 연결 성공!") # 👈 여기에 추가
         # 연결 테스트
         cursor = conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' LIMIT 1;")
