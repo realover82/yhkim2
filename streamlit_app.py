@@ -71,8 +71,8 @@ def render_header():
     st.title("리모컨 생산 데이터 분석 툴")
     st.markdown("---")
 
-def render_sidebar(tab_key, tab_info, df_all_data):
-    st.sidebar.header(f"'{tab_info[tab_key]['header']}' 제어")
+def render_main_content(tab_key, tab_info, df_all_data):
+    st.header(f"'{tab_info[tab_key]['header']}' 제어")
     
     jig_col_name = st.session_state.jig_col_mapping[tab_key]
     
@@ -83,14 +83,14 @@ def render_sidebar(tab_key, tab_info, df_all_data):
 
     unique_jigs = df_all_data[jig_col_name].dropna().unique()
     pc_options = ['모든 PC'] + sorted(list(unique_jigs))
-    selected_jig = st.sidebar.selectbox("PC (Jig) 선택", pc_options, key=f"pc_select_{tab_key}")
+    selected_jig = st.selectbox("PC (Jig) 선택", pc_options, key=f"pc_select_{tab_key}")
 
     df_dates = df_all_data[tab_info[tab_key]['date_col']].dt.date.dropna()
     min_date = df_dates.min() if not df_dates.empty else date.today()
     max_date = df_dates.max() if not df_dates.dropna().empty else date.today()
-    selected_dates = st.sidebar.date_input("날짜 범위 선택", value=(min_date, max_date), key=f"dates_{tab_key}")
+    selected_dates = st.date_input("날짜 범위 선택", value=(min_date, max_date), key=f"dates_{tab_key}")
     
-    if st.sidebar.button("분석 실행", key=f"analyze_{tab_key}"):
+    if st.button("분석 실행", key=f"analyze_{tab_key}"):
         with st.spinner("데이터 분석 및 저장 중..."):
             if len(selected_dates) == 2:
                 start_date, end_date = selected_dates
@@ -110,13 +110,11 @@ def render_sidebar(tab_key, tab_info, df_all_data):
             st.session_state.analysis_status[tab_key]['analyzed'] = True
         st.success("분석 완료! 결과가 저장되었습니다.")
     
-    return selected_jig, jig_col_name
-
-def render_main_content(tab_key, tab_info, selected_jig, jig_col_name):
     if st.session_state.analysis_status[tab_key]['analyzed']:
         display_analysis_result(tab_key, tab_info[tab_key]['header'], tab_info[tab_key]['date_col'],
                                 selected_jig=selected_jig if selected_jig != '모든 PC' else None,
                                 used_jig_col=st.session_state.analysis_data[tab_key][2])
+
 
 def render_footer(tab_key, df_all_data):
     st.markdown("---")
@@ -130,7 +128,6 @@ def render_footer(tab_key, df_all_data):
             if snumber_query:
                 st.session_state.snumber_search[tab_key]['show'] = True
                 with st.spinner("데이터베이스에서 SNumber 검색 중..."):
-                    # 현재 탭에 대한 데이터만 필터링하여 검색
                     tab_df = st.session_state.analysis_results.get(tab_key, pd.DataFrame())
                     filtered_df = tab_df[
                         tab_df['SNumber'].fillna('').astype(str).str.contains(snumber_query, case=False, na=False)
@@ -200,8 +197,7 @@ def main():
     
     for i, tab_key in enumerate(tab_info.keys()):
         with tabs[i]:
-            selected_jig, jig_col_name = render_sidebar(tab_key, tab_info, df_all_data)
-            render_main_content(tab_key, tab_info, selected_jig, jig_col_name)
+            render_main_content(tab_key, tab_info, df_all_data)
             render_footer(tab_key, df_all_data)
 
 
