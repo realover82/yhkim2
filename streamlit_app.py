@@ -22,12 +22,12 @@ modules_loaded = False
 
 # 프로젝트 내부 모듈을 import 합니다.
 try:
-    # from db.db_utils import get_connection
-    # 수정 후 (임시 테스트)
-    import sqlite3
-    def get_connection():
-        st.info("테스트: 간단한 메모리 DB 연결")
-        return sqlite3.connect(':memory:')
+    from db.db_utils import get_connection
+    # # 수정 후 (임시 테스트)
+    # import sqlite3
+    # def get_connection():
+    #     st.info("테스트: 간단한 메모리 DB 연결")
+    #     return sqlite3.connect(':memory:')
     
     from services.analysis_service import analyze_data
     from utils.ui_helpers import display_analysis_result, display_data_views
