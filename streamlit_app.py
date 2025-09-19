@@ -176,6 +176,7 @@ def main():
         st.error(f"❌ 데이터베이스 연결 중 예외 발생: {e}")
         st.stop()
     
+<<<<<<< HEAD
     st.info("--- 3. 데이터베이스 연결 성공 및 테이블 로드 시작 ---") # 👈 이처럼 추가하세요    
     # 데이터베이스 테이블 조회 전 테이블 존재 여부 확인
     try:
@@ -201,6 +202,34 @@ def main():
         if target_table:
             df_all_data = pd.read_sql_query(f"SELECT * FROM {target_table};", conn)
             st.success(f"✅ '{target_table}' 테이블 로드 완료! (총 {len(df_all_data):,}개 레코드)")
+=======
+    if jig_col_name not in df_all_data.columns:
+        jig_col_name = '__total_group__'
+        df_all_data[jig_col_name] = '전체'
+
+    unique_jigs = df_all_data[jig_col_name].dropna().unique()
+    pc_options = ['모든 PC'] + sorted(list(unique_jigs))
+    selected_jig = st.sidebar.selectbox("PC (Jig) 선택", pc_options, key=f"pc_select_{tab_key}")
+
+    df_dates = df_all_data[tab_info[tab_key]['date_col']].dt.date.dropna()
+    min_date = df_dates.min() if not df_dates.empty else date.today()
+    max_date = df_dates.max() if not df_dates.dropna().empty else date.today()
+    selected_dates = st.sidebar.date_input("날짜 범위 선택", value=(min_date, max_date), key=f"dates_{tab_key}")
+    
+    if st.sidebar.button("분석 실행", key=f"analyze_{tab_key}"):
+        with st.spinner("데이터 분석 및 저장 중..."):
+            if len(selected_dates) == 2:
+                start_date, end_date = selected_dates
+                df_filtered = df_all_data[
+                    (df_all_data[tab_info[tab_key]['date_col']].dt.date >= start_date) &
+                    (df_all_data[tab_info[tab_key]['date_col']].dt.date <= end_date)
+                ].copy()
+                if selected_jig != '모든 PC':
+                    df_filtered = df_filtered[df_filtered[jig_col_name] == selected_jig].copy()
+            else:
+                st.warning("날짜 범위를 올바르게 선택해주세요.")
+                df_filtered = pd.DataFrame()
+>>>>>>> parent of a357b44 (Add new feature for user authentication)
             
             st.info("--- 4. 날짜 컬럼 변환 시작 ---")  # 👈 이 부분 추가
             st.write("테이블의 실제 컬럼들:") # 👈 이 부분 추가
@@ -237,6 +266,7 @@ def main():
         'func': {'header': "파일 Func (Func_Process)", 'date_col': 'BatadcStamp_dt'}
     }
 
+<<<<<<< HEAD
     tabs = st.tabs(list(tab_info.keys()))
 
     for i, tab_key in enumerate(tab_info.keys()):
@@ -256,6 +286,38 @@ def main():
                 unique_jigs = df_all_data[jig_col_name].dropna().unique()
                 pc_options = ['모든 PC'] + sorted(list(unique_jigs))
                 selected_jig = st.selectbox("PC (Jig) 선택", pc_options, key=f"pc_select_{tab_key}")
+=======
+    snumber_query = st.text_input("SNumber를 입력하세요", key=f"snumber_search_bar_{tab_key}")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("SNumber 검색 실행", key=f"snumber_search_btn_{tab_key}"):
+            if snumber_query:
+                st.session_state.snumber_search[tab_key]['show'] = True
+                with st.spinner("데이터베이스에서 SNumber 검색 중..."):
+                    filtered_df = df_all_data[
+                        df_all_data['SNumber'].fillna('').astype(str).str.contains(snumber_query, case=False, na=False)
+                    ].copy()
+                
+                if not filtered_df.empty:
+                    st.success(f"'{snumber_query}'에 대한 {len(filtered_df)}건의 검색 결과를 찾았습니다.")
+                    st.session_state.snumber_search[tab_key]['results'] = filtered_df
+                else:
+                    st.warning(f"'{snumber_query}'에 대한 검색 결과가 없습니다.")
+                    st.session_state.snumber_search[tab_key]['results'] = pd.DataFrame()
+            else:
+                st.warning("SNumber를 입력해주세요.")
+                st.session_state.snumber_search[tab_key]['results'] = pd.DataFrame()
+    with col2:
+        if st.button("원본 DB 조회", key=f"view_last_db_{tab_key}"):
+            st.session_state.original_db_view[tab_key]['show'] = True
+            if st.session_state.analysis_results[tab_key] is not None:
+                st.success(f"{tab_key.upper()} 탭의 원본 데이터를 조회합니다.")
+                st.session_state.original_db_view[tab_key]['results'] = st.session_state.analysis_results[tab_key].copy()
+            else:
+                st.warning(f"먼저 {tab_key.upper()} 탭에서 '분석 실행' 버튼을 눌러 데이터를 분석해주세요.")
+                st.session_state.original_db_view[tab_key]['results'] = pd.DataFrame()
+>>>>>>> parent of a357b44 (Add new feature for user authentication)
 
                 date_col = tab_info[tab_key]['date_col']
                 if date_col not in df_all_data.columns:
@@ -306,7 +368,53 @@ def main():
 
     st.markdown("---")
     st.markdown("<p style='text-align:center'>Copyright © 2024</p>", unsafe_allow_html=True)
+<<<<<<< HEAD
             
+=======
+
+
+def main():
+    st.set_page_config(layout="wide")
+    initialize_session_state()
+    
+    conn = get_connection()
+    if conn is None:
+        return
+        
+    try:
+        df_all_data = pd.read_sql_query("SELECT * FROM historyinspection;", conn)
+    except Exception as e:
+        st.error(f"데이터베이스에서 'historyinspection' 테이블을 불러오는 중 오류가 발생했습니다: {e}")
+        return
+
+    df_all_data['PcbStartTime_dt'] = pd.to_datetime(df_all_data['PcbStartTime'], errors='coerce')
+    df_all_data['FwStamp_dt'] = pd.to_datetime(df_all_data['FwStamp'], errors='coerce')
+    df_all_data['RfTxStamp_dt'] = pd.to_datetime(df_all_data['RfTxStamp'], errors='coerce')
+    df_all_data['SemiAssyStartTime_dt'] = pd.to_datetime(df_all_data['SemiAssyStartTime'], errors='coerce')
+    df_all_data['BatadcStamp_dt'] = pd.to_datetime(df_all_data['BatadcStamp'], errors='coerce')
+
+    tab_info = {
+        'pcb': {'header': "파일 PCB 분석", 'date_col': 'PcbStartTime_dt'},
+        'fw': {'header': "파일 Fw 분석", 'date_col': 'FwStamp_dt'},
+        'rftx': {'header': "파일 RfTx 분석", 'date_col': 'RfTxStamp_dt'},
+        'semi': {'header': "파일 Semi 분석", 'date_col': 'SemiAssyStartTime_dt'},
+        'func': {'header': "파일 Func 분석", 'date_col': 'BatadcStamp_dt'}
+    }
+    
+    # 헤더 영역
+    render_header()
+
+    # 탭과 메인 콘텐츠 영역
+    tabs = st.tabs(list(tab_info.keys()))
+    
+    for i, tab_key in enumerate(tab_info.keys()):
+        with tabs[i]:
+            selected_jig, jig_col_name = render_sidebar(tab_key, tab_info, df_all_data)
+            render_main_content(tab_key, tab_info, selected_jig, jig_col_name)
+            render_footer(tab_key, df_all_data)
+
+
+>>>>>>> parent of a357b44 (Add new feature for user authentication)
 if __name__ == "__main__":
     try:
         main()
