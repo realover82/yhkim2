@@ -1,6 +1,4 @@
 streamlit
-pymysql
-altair
 pandas
+altair
 requests
-sqlite3
