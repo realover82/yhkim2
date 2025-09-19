@@ -16,7 +16,7 @@ def get_connection():
     """
     # GCS에서 다운로드할 파일 URL과 로컬 저장 경로를 정의합니다.
     gcs_url = 'https://storage.googleapis.com/webdb5/SJ_TM2360E/SJ_TM2360E.sqlite3'
-    db_path = "src/db/SJ_TM2360E.sqlite3"
+    db_path = "./src/db/SJ_TM2360E.sqlite3"
 
     # src/db 디렉터리가 없으면 생성합니다.
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
