@@ -8,6 +8,7 @@ import os
 # 현재 파일의 절대 경로를 기준으로 프로젝트 루트 디렉토리를 찾습니다.
 project_root = os.path.dirname(os.path.abspath(__file__))
 
+
 # src 폴더를 Python path에 추가
 src_path = os.path.join(project_root, 'src')
 if src_path not in sys.path:
@@ -19,6 +20,20 @@ if project_root not in sys.path:
 
 # 에러 처리를 위한 플래그
 modules_loaded = False
+
+# 경로 디버깅 코드
+st.info("--- 경로 디버깅 시작 ---")
+src_path_check = os.path.join(project_root, 'src')
+st.write(f"✅ 프로젝트 루트: {project_root}")
+st.write(f"✅ src 폴더 경로: {src_path_check}")
+st.write(f"✅ src 폴더 존재 여부: {os.path.exists(src_path_check)}")
+
+db_utils_path = os.path.join(src_path_check, 'db', 'db_utils.py')
+st.write(f"✅ db_utils.py 파일 경로: {db_utils_path}")
+st.write(f"✅ db_utils.py 파일 존재 여부: {os.path.exists(db_utils_path)}")
+
+st.info("--- 경로 디버깅 완료 ---")
+# --- 여기까지 추가 ---
 
 # 프로젝트 내부 모듈을 import 합니다.
 try:
