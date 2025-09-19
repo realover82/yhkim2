@@ -1,6 +1,6 @@
 streamlit
 pymysql
 altair
-pandas>=2.0.0
-requests>=2.25.0
+pandas
+requests
 sqlite3
