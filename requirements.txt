@@ -1,4 +1,3 @@
 streamlit
 pymysql
 altair
-gdown
